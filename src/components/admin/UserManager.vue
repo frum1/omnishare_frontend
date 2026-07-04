@@ -250,7 +250,10 @@ const usageLabel = (user: User): string => {
 
 <template>
   <section class="users">
-    <h2 class="section-title">Users</h2>
+    <h2 class="section-title">
+      <i class="pi pi-users" />
+      Users
+    </h2>
 
     <!-- Create user card -->
     <button class="create-card" @click="openCreate">
@@ -397,7 +400,7 @@ const usageLabel = (user: User): string => {
         />
       </div>
       <template #footer>
-        <Button label="Done" @click="resetResult = null" />
+        <Button label="Done" icon="pi pi-check" @click="resetResult = null" />
       </template>
     </Dialog>
 
@@ -471,10 +474,17 @@ const usageLabel = (user: User): string => {
 }
 
 .section-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
   margin: 0 0 1.25rem;
   font-size: 1.15rem;
   font-weight: 600;
   color: var(--p-text-color);
+}
+
+.section-title .pi {
+  color: var(--p-primary-color);
 }
 
 .create-card {

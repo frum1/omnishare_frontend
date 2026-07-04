@@ -73,7 +73,10 @@ async function save(): Promise<void> {
 
 <template>
   <section class="settings">
-    <h2 class="section-title">Service configuration</h2>
+    <h2 class="section-title">
+      <i class="pi pi-cog" />
+      Service configuration
+    </h2>
 
     <div v-if="loading" class="loading">Loading…</div>
 
@@ -152,10 +155,17 @@ async function save(): Promise<void> {
 }
 
 .section-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
   margin: 0 0 1.25rem;
   font-size: 1.15rem;
   font-weight: 600;
   color: var(--p-text-color);
+}
+
+.section-title .pi {
+  color: var(--p-primary-color);
 }
 
 .grid {
