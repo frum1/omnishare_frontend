@@ -2,6 +2,7 @@
 import { onMounted, ref } from 'vue'
 import InputText from 'primevue/inputtext'
 import InputNumber from 'primevue/inputnumber'
+import Select from 'primevue/select'
 import Button from 'primevue/button'
 import { useToast } from 'primevue/usetoast'
 import { ApiError, settingsApi, type Settings } from '@/api'
@@ -12,9 +13,30 @@ const form = ref<Settings | null>(null)
 const loading = ref(true)
 const saving = ref(false)
 
+// Max file size is stored in MB by the API; expose a MB/GB unit picker.
+// The unit value is a multiplier in MB terms (GB = 1024 MB).
+const SIZE_UNITS = [
+  { label: 'MB', value: 1 },
+  { label: 'GB', value: 1024 },
+]
+const sizeValue = ref(1)
+const sizeUnit = ref(1)
+
+function initSizeFields(mb: number): void {
+  // Show GB when it divides evenly into whole GBs, otherwise MB.
+  if (mb >= 1024 && mb % 1024 === 0) {
+    sizeUnit.value = 1024
+    sizeValue.value = mb / 1024
+  } else {
+    sizeUnit.value = 1
+    sizeValue.value = mb
+  }
+}
+
 onMounted(async () => {
   try {
     form.value = await settingsApi.get()
+    initSizeFields(form.value.max_file_size_mb)
   } catch (err) {
     toast.add({
       severity: 'error',
@@ -29,9 +51,12 @@ onMounted(async () => {
 
 async function save(): Promise<void> {
   if (!form.value) return
+  // Fold the MB/GB picker back into the API's MB field.
+  form.value.max_file_size_mb = Math.round(sizeValue.value * sizeUnit.value)
   saving.value = true
   try {
     form.value = await settingsApi.update(form.value)
+    initSizeFields(form.value.max_file_size_mb)
     toast.add({ severity: 'success', summary: 'Settings saved', life: 2500 })
   } catch (err) {
     toast.add({
@@ -76,14 +101,23 @@ async function save(): Promise<void> {
       </div>
 
       <div class="field">
-        <label for="max-size">Max file size (MB)</label>
-        <InputNumber
-          input-id="max-size"
-          v-model="form.max_file_size_mb"
-          :min="1"
-          :use-grouping="false"
-          fluid
-        />
+        <label for="max-size">Max file size</label>
+        <div class="size-inputs">
+          <InputNumber
+            input-id="max-size"
+            v-model="sizeValue"
+            :min="1"
+            :use-grouping="false"
+            class="size-value"
+          />
+          <Select
+            v-model="sizeUnit"
+            :options="SIZE_UNITS"
+            option-label="label"
+            option-value="value"
+            class="size-unit"
+          />
+        </div>
       </div>
 
       <div class="field">
@@ -144,6 +178,19 @@ async function save(): Promise<void> {
 
 .span-2 {
   grid-column: 1 / -1;
+}
+
+.size-inputs {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.size-value {
+  flex: 1;
+}
+
+.size-unit {
+  flex: 0 0 6rem;
 }
 
 .actions {

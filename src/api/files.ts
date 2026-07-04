@@ -1,9 +1,11 @@
 import { http, uploadFormData, type UploadProgress } from './http'
 import type {
   AdminFileList,
+  DiskUsage,
   FileOut,
   UpdateCaptionRequest,
   UploadFileParams,
+  UsageInfo,
   UserFileList,
 } from './types'
 
@@ -52,5 +54,15 @@ export const filesApi = {
   /** GET /api/files/{id}/info — public file metadata (FileOut) for the download page. */
   info(fileId: string): Promise<FileOut> {
     return http.get<FileOut>(`/api/files/${fileId}/info`, { auth: false })
+  },
+
+  /** GET /api/files/usage — the current user's storage usage and quota. */
+  usage(): Promise<UsageInfo> {
+    return http.get<UsageInfo>('/api/files/usage')
+  },
+
+  /** GET /api/files/disk-usage — physical disk space on the server (admin). */
+  diskUsage(): Promise<DiskUsage> {
+    return http.get<DiskUsage>('/api/files/disk-usage')
   },
 }

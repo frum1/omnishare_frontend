@@ -7,6 +7,10 @@ export interface User {
   is_admin: boolean
   must_change_password: boolean
   created_at: string // ISO 8601
+  /** Bytes currently stored by the user. Present in GET /admin/users. */
+  used_bytes?: number
+  /** Storage quota in bytes; null = unlimited. Present in GET /admin/users. */
+  quota_bytes?: number | null
 }
 
 /** A stored file with sharing metadata. */
@@ -72,6 +76,26 @@ export interface CreateUserRequest {
   username: string
   password: string
   is_admin?: boolean
+  /** Storage quota in bytes; null/omitted = unlimited. */
+  quota_bytes?: number | null
+}
+
+/** Body for PATCH /admin/users/{id}/quota. null = remove the limit. */
+export interface SetQuotaRequest {
+  quota_bytes: number | null
+}
+
+/** GET /api/files/usage — the current user's storage usage. */
+export interface UsageInfo {
+  used_bytes: number
+  quota_bytes: number | null
+}
+
+/** GET /api/files/disk-usage — physical disk space (admin). */
+export interface DiskUsage {
+  total_bytes: number
+  used_bytes: number
+  free_bytes: number
 }
 
 export interface ResetPasswordResponse {

@@ -6,6 +6,8 @@ import AccordionHeader from 'primevue/accordionheader'
 import AccordionContent from 'primevue/accordioncontent'
 import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
+import InputNumber from 'primevue/inputnumber'
+import Select from 'primevue/select'
 import Password from 'primevue/password'
 import Checkbox from 'primevue/checkbox'
 import Button from 'primevue/button'
@@ -21,6 +23,7 @@ import {
   type FileOut,
   type User,
 } from '@/api'
+import { formatBytes } from '@/utils/format'
 import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
@@ -41,6 +44,20 @@ const createError = ref('')
 const resetResult = ref<{ username: string; temporary_password: string } | null>(
   null,
 )
+
+// --- Change quota dialog ---
+const MB = 1024 * 1024
+const GB = 1024 * MB
+const QUOTA_UNITS = [
+  { label: 'MB', value: MB },
+  { label: 'GB', value: GB },
+]
+const quotaTarget = ref<User | null>(null)
+const quotaUnlimited = ref(false)
+const quotaValue = ref(1)
+const quotaUnit = ref(GB)
+const quotaSaving = ref(false)
+const quotaError = ref('')
 
 onMounted(load)
 
@@ -113,6 +130,52 @@ async function resetPassword(user: User): Promise<void> {
   }
 }
 
+function openQuota(user: User): void {
+  quotaError.value = ''
+  if (user.quota_bytes == null) {
+    // Currently unlimited: default the form to a sensible starting value.
+    quotaUnlimited.value = true
+    quotaValue.value = 1
+    quotaUnit.value = GB
+  } else {
+    quotaUnlimited.value = false
+    // Show GB for large quotas, MB otherwise, keeping the number readable.
+    const unit = user.quota_bytes >= GB ? GB : MB
+    quotaUnit.value = unit
+    quotaValue.value = Math.round((user.quota_bytes / unit) * 100) / 100
+  }
+  quotaTarget.value = user
+}
+
+async function submitQuota(): Promise<void> {
+  const user = quotaTarget.value
+  if (!user) return
+
+  const bytes = quotaUnlimited.value
+    ? null
+    : Math.round(quotaValue.value * quotaUnit.value)
+
+  if (bytes !== null && bytes <= 0) {
+    quotaError.value = 'Enter a quota greater than zero, or choose "No limit".'
+    return
+  }
+
+  quotaSaving.value = true
+  quotaError.value = ''
+  try {
+    const updated = await usersApi.setQuota(user.id, bytes)
+    // Reflect the new quota in the list (used_bytes is unchanged).
+    user.quota_bytes = updated.quota_bytes ?? bytes
+    quotaTarget.value = null
+    toast.add({ severity: 'success', summary: 'Quota updated', life: 2500 })
+  } catch (err) {
+    quotaError.value =
+      err instanceof ApiError ? err.detail : 'Something went wrong. Please try again.'
+  } finally {
+    quotaSaving.value = false
+  }
+}
+
 function deleteUser(user: User): void {
   confirm.require({
     header: 'Delete user',
@@ -176,6 +239,13 @@ async function copyTempPassword(): Promise<void> {
 
 const isSelf = (user: User) => user.id === auth.user?.id
 const userFiles = (id: string): FileOut[] => filesByUser.value[id] ?? []
+
+/** "used / quota" label from the API's per-user usage (∞ when unlimited). */
+const usageLabel = (user: User): string => {
+  const used = formatBytes(user.used_bytes ?? 0)
+  const quota = user.quota_bytes == null ? '∞' : formatBytes(user.quota_bytes)
+  return `${used} / ${quota}`
+}
 </script>
 
 <template>
@@ -198,6 +268,16 @@ const userFiles = (id: string): FileOut[] => filesByUser.value[id] ?? []
             <span class="username">{{ user.username }}</span>
             <Tag v-if="user.is_admin" value="Admin" severity="info" />
             <Tag v-if="isSelf(user)" value="You" severity="secondary" />
+            <span class="user-stats">
+              <span class="stat">
+                <i class="pi pi-file" />
+                {{ userFiles(user.id).length }}
+              </span>
+              <span class="stat">
+                <i class="pi pi-database" />
+                {{ usageLabel(user) }}
+              </span>
+            </span>
           </span>
         </AccordionHeader>
         <AccordionContent>
@@ -205,6 +285,14 @@ const userFiles = (id: string): FileOut[] => filesByUser.value[id] ?? []
             <div class="actions-block">
               <h3 class="block-title">Actions</h3>
               <div class="action-buttons">
+                <Button
+                  label="Change quota"
+                  icon="pi pi-database"
+                  severity="secondary"
+                  outlined
+                  size="small"
+                  @click="openQuota(user)"
+                />
                 <Button
                   label="Reset password"
                   icon="pi pi-key"
@@ -312,6 +400,65 @@ const userFiles = (id: string): FileOut[] => filesByUser.value[id] ?? []
         <Button label="Done" @click="resetResult = null" />
       </template>
     </Dialog>
+
+    <!-- Change quota dialog -->
+    <Dialog
+      :visible="quotaTarget !== null"
+      header="Change quota"
+      modal
+      :style="{ width: '25rem' }"
+      :breakpoints="{ '480px': '92vw' }"
+      @update:visible="(v) => { if (!v) quotaTarget = null }"
+    >
+      <form class="dialog-form" @submit.prevent="submitQuota">
+        <p class="quota-note">
+          Storage quota for <strong>{{ quotaTarget?.username }}</strong>.
+        </p>
+
+        <div class="checkbox-row">
+          <Checkbox input-id="q-unlimited" v-model="quotaUnlimited" binary />
+          <label for="q-unlimited">No limit (unlimited)</label>
+        </div>
+
+        <div v-if="!quotaUnlimited" class="field">
+          <label>Quota</label>
+          <div class="quota-inputs">
+            <InputNumber
+              v-model="quotaValue"
+              :min="0"
+              :min-fraction-digits="0"
+              :max-fraction-digits="2"
+              class="quota-value"
+            />
+            <Select
+              v-model="quotaUnit"
+              :options="QUOTA_UNITS"
+              option-label="label"
+              option-value="value"
+              class="quota-unit"
+            />
+          </div>
+        </div>
+
+        <Message v-if="quotaError" severity="error" variant="simple">
+          {{ quotaError }}
+        </Message>
+      </form>
+      <template #footer>
+        <Button
+          label="Cancel"
+          severity="secondary"
+          text
+          @click="quotaTarget = null"
+        />
+        <Button
+          label="Save"
+          icon="pi pi-check"
+          :loading="quotaSaving"
+          @click="submitQuota"
+        />
+      </template>
+    </Dialog>
   </section>
 </template>
 
@@ -369,6 +516,33 @@ const userFiles = (id: string): FileOut[] => filesByUser.value[id] ?? []
   display: flex;
   align-items: center;
   gap: 0.6rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.user-stats {
+  margin-left: auto;
+  display: flex;
+  gap: 1rem;
+  font-size: 0.82rem;
+  color: var(--p-text-muted-color);
+}
+
+.user-stats .stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  white-space: nowrap;
+}
+
+.user-stats .stat .pi {
+  font-size: 0.75rem;
+}
+
+@media (max-width: 480px) {
+  .user-stats {
+    display: none;
+  }
 }
 
 .username {
@@ -423,6 +597,24 @@ const userFiles = (id: string): FileOut[] => filesByUser.value[id] ?? []
 .reset-note {
   margin: 0 0 1rem;
   color: var(--p-text-muted-color);
+}
+
+.quota-note {
+  margin: 0;
+  color: var(--p-text-muted-color);
+}
+
+.quota-inputs {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.quota-value {
+  flex: 1;
+}
+
+.quota-unit {
+  flex: 0 0 6rem;
 }
 
 .temp-password {

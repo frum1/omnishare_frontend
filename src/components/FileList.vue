@@ -5,7 +5,12 @@ import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
 import { useToast } from 'primevue/usetoast'
 import type { FileOut } from '@/api'
-import { formatBytes, toSharePage } from '@/utils/format'
+import {
+  formatBytes,
+  formatDownloads,
+  formatExpiry,
+  toSharePage,
+} from '@/utils/format'
 
 defineProps<{
   files: FileOut[]
@@ -59,6 +64,19 @@ async function copy(url: string): Promise<void> {
           {{ file.original_filename }}
         </span>
         <span v-if="file.caption" class="caption">{{ file.caption }}</span>
+        <span class="meta">
+          <span
+            class="meta-item"
+            :title="`Downloads: ${formatDownloads(file.download_count, file.max_downloads)}`"
+          >
+            <i class="pi pi-download" />
+            {{ formatDownloads(file.download_count, file.max_downloads) }}
+          </span>
+          <span class="meta-item" :title="`Expires: ${formatExpiry(file.expires_at)}`">
+            <i class="pi pi-clock" />
+            {{ formatExpiry(file.expires_at) }}
+          </span>
+        </span>
       </div>
       <span class="col-size">{{ formatBytes(file.size_bytes) }}</span>
       <div class="col-actions">
@@ -207,6 +225,26 @@ async function copy(url: string): Promise<void> {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 0.1rem;
+  font-size: 0.78rem;
+  color: var(--p-text-muted-color);
+}
+
+.meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  white-space: nowrap;
+}
+
+.meta-item .pi {
+  font-size: 0.72rem;
 }
 
 .col-size {

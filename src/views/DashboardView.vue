@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
 import UploadStaging from '@/components/UploadStaging.vue'
 import FileList from '@/components/FileList.vue'
+import QuotaBar from '@/components/QuotaBar.vue'
 import { ApiError, filesApi, type FileOut } from '@/api'
 import { useAuthStore } from '@/stores/auth'
 
@@ -14,7 +15,28 @@ const confirm = useConfirm()
 const files = ref<FileOut[]>([])
 const loading = ref(true)
 
-onMounted(loadFiles)
+// Quota comes from the API; usage is derived from the file list so the bar
+// updates instantly on upload/delete without another request.
+const quotaBytes = ref<number | null>(null)
+const usageAvailable = ref(false)
+const usedBytes = computed(() =>
+  files.value.reduce((sum, f) => sum + f.size_bytes, 0),
+)
+
+onMounted(() => {
+  loadFiles()
+  loadUsage()
+})
+
+async function loadUsage(): Promise<void> {
+  try {
+    const usage = await filesApi.usage()
+    quotaBytes.value = usage.quota_bytes
+    usageAvailable.value = true
+  } catch {
+    // Non-fatal: the quota bar simply stays hidden.
+  }
+}
 
 async function loadFiles(): Promise<void> {
   loading.value = true
@@ -68,6 +90,8 @@ function onDelete(file: FileOut): void {
 <template>
   <div class="dashboard">
     <UploadStaging @uploaded="onUploaded" />
+
+    <QuotaBar v-if="usageAvailable" :used="usedBytes" :quota="quotaBytes" />
 
     <FileList
       :files="files"

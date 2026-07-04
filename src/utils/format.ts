@@ -27,3 +27,34 @@ export function formatBytes(bytes: number): string {
 export function toSharePage(directUrl: string): string {
   return directUrl.replace(/\/f\/([^/?#]+)/, '/s/$1')
 }
+
+/** Download counter as `used / limit`, with ∞ for an unlimited (null) cap. */
+export function formatDownloads(count: number, max: number | null): string {
+  return `${count} / ${max ?? '∞'}`
+}
+
+/**
+ * Parse an API timestamp to epoch ms. The backend emits naive UTC ISO strings
+ * (no timezone), which JS would otherwise read as *local* time — so we append
+ * 'Z' when the string carries no zone designator to force UTC.
+ */
+export function parseApiDate(value: string): number {
+  const hasZone = /[zZ]$|[+-]\d{2}:?\d{2}$/.test(value)
+  return new Date(hasZone ? value : `${value}Z`).getTime()
+}
+
+/**
+ * Time left until expiry as a compact label ("2 d", "5 h", "30 min"), or
+ * "Never" when there is no TTL and "Expired" once the moment has passed.
+ */
+export function formatExpiry(expiresAt: string | null): string {
+  if (!expiresAt) return 'Never'
+  const ms = parseApiDate(expiresAt) - Date.now()
+  if (ms <= 0) return 'Expired'
+
+  const minutes = Math.floor(ms / 60_000)
+  if (minutes < 60) return `${Math.max(1, minutes)} min`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours} h`
+  return `${Math.floor(hours / 24)} d`
+}
