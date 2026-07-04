@@ -1,0 +1,85 @@
+// Domain types mirroring the OmniShare API schema (see api_scheme.md)
+
+/** A user account. Returned by admin user endpoints and derivable from the token owner. */
+export interface User {
+  id: string
+  username: string
+  is_admin: boolean
+  must_change_password: boolean
+  created_at: string // ISO 8601
+}
+
+/** A stored file with sharing metadata. */
+export interface FileOut {
+  id: string
+  original_filename: string
+  content_type: string
+  size_bytes: number
+  caption: string | null
+  created_at: string // ISO 8601
+  expires_at: string | null // ISO 8601
+  max_downloads: number | null
+  download_count: number
+  public_url: string
+  local_url: string
+}
+
+/** Service configuration (admin only). */
+export interface Settings {
+  public_base_url: string
+  local_base_url: string
+  local_port: number
+  max_file_size_mb: number
+  cleanup_interval_minutes: number
+}
+
+// --- Auth ---
+
+export interface LoginResponse {
+  access_token: string
+  token_type: string
+}
+
+export interface ChangePasswordRequest {
+  new_password: string
+}
+
+// --- Files ---
+
+/** Parameters for a file upload. `file` is required, the rest are optional. */
+export interface UploadFileParams {
+  file: File
+  /** Time-to-live in seconds. 0 or omitted = infinite. */
+  ttl_seconds?: number
+  /** Max downloads before auto-delete. 0 or omitted = infinite. */
+  max_downloads?: number
+  caption?: string
+}
+
+export interface UpdateCaptionRequest {
+  caption: string | null
+}
+
+/** `GET /api/files` returns a flat array for regular users. */
+export type UserFileList = FileOut[]
+
+/** `GET /api/files` returns files grouped by owner id for admins. */
+export type AdminFileList = Record<string, FileOut[]>
+
+// --- Users (admin) ---
+
+export interface CreateUserRequest {
+  username: string
+  password: string
+  is_admin?: boolean
+}
+
+export interface ResetPasswordResponse {
+  username: string
+  temporary_password: string
+}
+
+// --- Settings (admin) ---
+
+/** All fields optional; only provided fields are updated. */
+export type UpdateSettingsRequest = Partial<Settings>
