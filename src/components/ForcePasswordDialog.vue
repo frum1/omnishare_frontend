@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import Dialog from 'primevue/dialog'
 import Password from 'primevue/password'
 import Button from 'primevue/button'
@@ -10,6 +11,7 @@ import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
 const router = useRouter()
+const { t } = useI18n()
 
 const newPassword = ref('')
 const confirmPassword = ref('')
@@ -18,11 +20,11 @@ const loading = ref(false)
 
 async function submit(): Promise<void> {
   if (!newPassword.value) {
-    error.value = 'Please enter a new password.'
+    error.value = t('auth.enterNewPassword')
     return
   }
   if (newPassword.value !== confirmPassword.value) {
-    error.value = 'Passwords do not match.'
+    error.value = t('auth.passwordsDoNotMatch')
     return
   }
   error.value = ''
@@ -35,7 +37,7 @@ async function submit(): Promise<void> {
     router.push({ name: 'login', query: { passwordChanged: '1' } })
   } catch (err) {
     error.value =
-      err instanceof ApiError ? err.detail : 'Something went wrong. Please try again.'
+      err instanceof ApiError ? err.detail : t('common.error')
   } finally {
     loading.value = false
   }
@@ -45,7 +47,7 @@ async function submit(): Promise<void> {
 <template>
   <Dialog
     :visible="auth.isAuthenticated && auth.mustChangePassword"
-    header="Set a new password"
+    :header="t('auth.setNewPassword')"
     modal
     :closable="false"
     :close-on-escape="false"
@@ -54,13 +56,12 @@ async function submit(): Promise<void> {
     :breakpoints="{ '480px': '92vw' }"
   >
     <Message severity="info" variant="simple" class="intro">
-      Your account uses a temporary password. Choose a new one to continue —
-      you'll be signed out afterwards and can log in with it.
+      {{ t('auth.passwordMustChange') }}
     </Message>
 
     <form class="form" @submit.prevent="submit">
       <div class="field">
-        <label for="fp-new">New password</label>
+        <label for="fp-new">{{ t('auth.newPassword') }}</label>
         <Password
           input-id="fp-new"
           v-model="newPassword"
@@ -73,7 +74,7 @@ async function submit(): Promise<void> {
       </div>
 
       <div class="field">
-        <label for="fp-confirm">Confirm password</label>
+        <label for="fp-confirm">{{ t('auth.confirmPassword') }}</label>
         <Password
           input-id="fp-confirm"
           v-model="confirmPassword"
@@ -91,7 +92,7 @@ async function submit(): Promise<void> {
 
       <Button
         type="submit"
-        label="Save & sign out"
+        :label="t('auth.saveAndSignOut')"
         icon="pi pi-check"
         :loading="loading"
         fluid

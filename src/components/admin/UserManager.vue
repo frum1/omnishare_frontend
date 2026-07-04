@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import Accordion from 'primevue/accordion'
 import AccordionPanel from 'primevue/accordionpanel'
 import AccordionHeader from 'primevue/accordionheader'
@@ -25,6 +26,8 @@ import {
 } from '@/api'
 import { formatBytes } from '@/utils/format'
 import { useAuthStore } from '@/stores/auth'
+
+const { t } = useI18n()
 
 const auth = useAuthStore()
 const toast = useToast()
@@ -74,8 +77,8 @@ async function load(): Promise<void> {
   } catch (err) {
     toast.add({
       severity: 'error',
-      summary: 'Could not load users',
-      detail: err instanceof ApiError ? err.detail : 'Please try again.',
+      summary: t('admin.couldNotLoadUsers'),
+      detail: err instanceof ApiError ? err.detail : t('common.error'),
       life: 4000,
     })
   } finally {
@@ -91,7 +94,7 @@ function openCreate(): void {
 
 async function submitCreate(): Promise<void> {
   if (!createForm.value.username || !createForm.value.password) {
-    createError.value = 'Username and password are required.'
+    createError.value = t('admin.usernameAndPasswordRequired')
     return
   }
   creating.value = true
@@ -102,16 +105,16 @@ async function submitCreate(): Promise<void> {
     createOpen.value = false
     toast.add({
       severity: 'success',
-      summary: `User "${user.username}" created`,
+      summary: t('admin.userCreated', { username: user.username }),
       life: 2500,
     })
   } catch (err) {
     createError.value =
       err instanceof ApiError && err.status === 409
-        ? 'A user with this username already exists.'
+        ? t('admin.userAlreadyExists')
         : err instanceof ApiError
           ? err.detail
-          : 'Something went wrong. Please try again.'
+          : t('common.error')
   } finally {
     creating.value = false
   }
@@ -123,8 +126,8 @@ async function resetPassword(user: User): Promise<void> {
   } catch (err) {
     toast.add({
       severity: 'error',
-      summary: 'Could not reset password',
-      detail: err instanceof ApiError ? err.detail : 'Please try again.',
+      summary: t('admin.resetPassword'),
+      detail: err instanceof ApiError ? err.detail : t('common.error'),
       life: 4000,
     })
   }
@@ -156,7 +159,7 @@ async function submitQuota(): Promise<void> {
     : Math.round(quotaValue.value * quotaUnit.value)
 
   if (bytes !== null && bytes <= 0) {
-    quotaError.value = 'Enter a quota greater than zero, or choose "No limit".'
+    quotaError.value = t('admin.enterQuotaGreaterThanZero')
     return
   }
 
@@ -167,10 +170,10 @@ async function submitQuota(): Promise<void> {
     // Reflect the new quota in the list (used_bytes is unchanged).
     user.quota_bytes = updated.quota_bytes ?? bytes
     quotaTarget.value = null
-    toast.add({ severity: 'success', summary: 'Quota updated', life: 2500 })
+    toast.add({ severity: 'success', summary: t('admin.quotaUpdated'), life: 2500 })
   } catch (err) {
     quotaError.value =
-      err instanceof ApiError ? err.detail : 'Something went wrong. Please try again.'
+      err instanceof ApiError ? err.detail : t('common.error')
   } finally {
     quotaSaving.value = false
   }
@@ -178,22 +181,22 @@ async function submitQuota(): Promise<void> {
 
 function deleteUser(user: User): void {
   confirm.require({
-    header: 'Delete user',
-    message: `Delete "${user.username}" and all their files? This can't be undone.`,
+    header: t('admin.deleteUser'),
+    message: t('admin.userDeleteConfirm', { username: user.username }),
     icon: 'pi pi-exclamation-triangle',
-    acceptProps: { label: 'Delete', severity: 'danger' },
-    rejectProps: { label: 'Cancel', severity: 'secondary', outlined: true },
+    acceptProps: { label: t('common.delete'), severity: 'danger' },
+    rejectProps: { label: t('common.cancel'), severity: 'secondary', outlined: true },
     accept: async () => {
       try {
         await usersApi.remove(user.id)
         users.value = users.value.filter((u) => u.id !== user.id)
         delete filesByUser.value[user.id]
-        toast.add({ severity: 'success', summary: 'User deleted', life: 2500 })
+        toast.add({ severity: 'success', summary: t('admin.userDeleted'), life: 2500 })
       } catch (err) {
         toast.add({
           severity: 'error',
-          summary: 'Could not delete user',
-          detail: err instanceof ApiError ? err.detail : 'Please try again.',
+          summary: t('admin.couldNotDeleteUser'),
+          detail: err instanceof ApiError ? err.detail : t('common.error'),
           life: 4000,
         })
       }
@@ -203,23 +206,23 @@ function deleteUser(user: User): void {
 
 function deleteFile(user: User, file: FileOut): void {
   confirm.require({
-    header: 'Delete file',
-    message: `Delete "${file.original_filename}"? This can't be undone.`,
+    header: t('dashboard.deleteFile'),
+    message: t('admin.fileDeleteConfirm', { filename: file.original_filename }),
     icon: 'pi pi-exclamation-triangle',
-    acceptProps: { label: 'Delete', severity: 'danger' },
-    rejectProps: { label: 'Cancel', severity: 'secondary', outlined: true },
+    acceptProps: { label: t('common.delete'), severity: 'danger' },
+    rejectProps: { label: t('common.cancel'), severity: 'secondary', outlined: true },
     accept: async () => {
       try {
         await filesApi.remove(file.id)
         filesByUser.value[user.id] = (filesByUser.value[user.id] ?? []).filter(
           (f) => f.id !== file.id,
         )
-        toast.add({ severity: 'success', summary: 'File deleted', life: 2500 })
+        toast.add({ severity: 'success', summary: t('dashboard.fileDeleted'), life: 2500 })
       } catch (err) {
         toast.add({
           severity: 'error',
-          summary: 'Could not delete file',
-          detail: err instanceof ApiError ? err.detail : 'Please try again.',
+          summary: t('dashboard.couldNotDeleteFile'),
+          detail: err instanceof ApiError ? err.detail : t('common.error'),
           life: 4000,
         })
       }
@@ -231,7 +234,7 @@ async function copyTempPassword(): Promise<void> {
   if (!resetResult.value) return
   try {
     await navigator.clipboard.writeText(resetResult.value.temporary_password)
-    toast.add({ severity: 'success', summary: 'Password copied', life: 2000 })
+    toast.add({ severity: 'success', summary: t('admin.passwordCopied'), life: 2000 })
   } catch {
     // ignore — the value is visible for manual copy
   }
@@ -252,16 +255,16 @@ const usageLabel = (user: User): string => {
   <section class="users">
     <h2 class="section-title">
       <i class="pi pi-users" />
-      Users
+      {{ t('admin.users') }}
     </h2>
 
     <!-- Create user card -->
     <button class="create-card" @click="openCreate">
       <i class="pi pi-plus" />
-      <span>Create user</span>
+      <span>{{ t('admin.createUser') }}</span>
     </button>
 
-    <div v-if="loading" class="loading">Loading…</div>
+    <div v-if="loading" class="loading">{{ t('common.loading') }}</div>
 
     <Accordion v-else :multiple="true" class="user-accordion">
       <AccordionPanel v-for="user in users" :key="user.id" :value="user.id">
@@ -269,8 +272,8 @@ const usageLabel = (user: User): string => {
           <span class="user-head">
             <i class="pi pi-user" />
             <span class="username">{{ user.username }}</span>
-            <Tag v-if="user.is_admin" value="Admin" severity="info" />
-            <Tag v-if="isSelf(user)" value="You" severity="secondary" />
+            <Tag v-if="user.is_admin" :value="t('admin.admin')" severity="info" />
+            <Tag v-if="isSelf(user)" :value="t('admin.you')" severity="secondary" />
             <span class="user-stats">
               <span class="stat">
                 <i class="pi pi-file" />
@@ -286,10 +289,10 @@ const usageLabel = (user: User): string => {
         <AccordionContent>
           <div class="panel-body">
             <div class="actions-block">
-              <h3 class="block-title">Actions</h3>
+              <h3 class="block-title">{{ t('admin.actions') }}</h3>
               <div class="action-buttons">
                 <Button
-                  label="Change quota"
+                  :label="t('admin.changeQuota')"
                   icon="pi pi-database"
                   severity="secondary"
                   outlined
@@ -297,7 +300,7 @@ const usageLabel = (user: User): string => {
                   @click="openQuota(user)"
                 />
                 <Button
-                  label="Reset password"
+                  :label="t('admin.resetPassword')"
                   icon="pi pi-key"
                   severity="secondary"
                   outlined
@@ -305,23 +308,23 @@ const usageLabel = (user: User): string => {
                   @click="resetPassword(user)"
                 />
                 <Button
-                  label="Delete user"
+                  :label="t('admin.deleteUser')"
                   icon="pi pi-trash"
                   severity="danger"
                   outlined
                   size="small"
                   :disabled="isSelf(user)"
-                  v-tooltip.top="isSelf(user) ? 'You cannot delete your own account' : undefined"
+                  v-tooltip.top="isSelf(user) ? t('admin.cannotDeleteOwnAccount') : undefined"
                   @click="deleteUser(user)"
                 />
               </div>
             </div>
 
             <div class="files-block">
-              <h3 class="block-title">Files</h3>
+              <h3 class="block-title">{{ t('admin.files') }}</h3>
               <FileList
                 :files="userFiles(user.id)"
-                empty-text="This user has no files."
+                :empty-text="t('admin.userHasNoFiles')"
                 @delete="(file) => deleteFile(user, file)"
               />
             </div>
@@ -333,17 +336,17 @@ const usageLabel = (user: User): string => {
     <!-- Create user dialog -->
     <Dialog
       v-model:visible="createOpen"
-      header="Create user"
+      :header="t('admin.createUserTitle')"
       modal
       :style="{ width: '25rem' }"
     >
       <form class="dialog-form" @submit.prevent="submitCreate">
         <div class="field">
-          <label for="new-username">Username</label>
+          <label for="new-username">{{ t('common.username') }}</label>
           <InputText id="new-username" v-model="createForm.username" fluid />
         </div>
         <div class="field">
-          <label for="new-password">Password</label>
+          <label for="new-password">{{ t('common.password') }}</label>
           <Password
             input-id="new-password"
             v-model="createForm.password"
@@ -358,7 +361,7 @@ const usageLabel = (user: User): string => {
             v-model="createForm.is_admin"
             binary
           />
-          <label for="new-admin">Administrator</label>
+          <label for="new-admin">{{ t('admin.adminCheckbox') }}</label>
         </div>
         <Message v-if="createError" severity="error" variant="simple">
           {{ createError }}
@@ -366,27 +369,25 @@ const usageLabel = (user: User): string => {
       </form>
       <template #footer>
         <Button
-          label="Cancel"
+          :label="t('common.cancel')"
           severity="secondary"
           text
           @click="createOpen = false"
         />
-        <Button label="Create" icon="pi pi-check" :loading="creating" @click="submitCreate" />
+        <Button :label="t('common.save')" icon="pi pi-check" :loading="creating" @click="submitCreate" />
       </template>
     </Dialog>
 
     <!-- Reset password result dialog -->
     <Dialog
       :visible="resetResult !== null"
-      header="Temporary password"
+      :header="t('admin.temporaryPassword')"
       modal
       :style="{ width: '25rem' }"
       @update:visible="(v) => { if (!v) resetResult = null }"
     >
       <p class="reset-note">
-        Share this one-time password with
-        <strong>{{ resetResult?.username }}</strong>. They must change it on next
-        login.
+        {{ t('admin.sharePasswordWith', { username: resetResult?.username || '' }) }}
       </p>
       <div class="temp-password">
         <code>{{ resetResult?.temporary_password }}</code>
@@ -400,14 +401,14 @@ const usageLabel = (user: User): string => {
         />
       </div>
       <template #footer>
-        <Button label="Done" icon="pi pi-check" @click="resetResult = null" />
+        <Button :label="t('admin.done')" icon="pi pi-check" @click="resetResult = null" />
       </template>
     </Dialog>
 
     <!-- Change quota dialog -->
     <Dialog
       :visible="quotaTarget !== null"
-      header="Change quota"
+      :header="t('admin.changeQuotaTitle')"
       modal
       :style="{ width: '25rem' }"
       :breakpoints="{ '480px': '92vw' }"
@@ -415,16 +416,16 @@ const usageLabel = (user: User): string => {
     >
       <form class="dialog-form" @submit.prevent="submitQuota">
         <p class="quota-note">
-          Storage quota for <strong>{{ quotaTarget?.username }}</strong>.
+          {{ t('admin.quotaNote', { username: quotaTarget?.username || '' }) }}
         </p>
 
         <div class="checkbox-row">
           <Checkbox input-id="q-unlimited" v-model="quotaUnlimited" binary />
-          <label for="q-unlimited">No limit (unlimited)</label>
+          <label for="q-unlimited">{{ t('admin.noLimit') }}</label>
         </div>
 
         <div v-if="!quotaUnlimited" class="field">
-          <label>Quota</label>
+          <label>{{ t('admin.changeQuota') }}</label>
           <div class="quota-inputs">
             <InputNumber
               v-model="quotaValue"
@@ -449,13 +450,13 @@ const usageLabel = (user: User): string => {
       </form>
       <template #footer>
         <Button
-          label="Cancel"
+          :label="t('common.cancel')"
           severity="secondary"
           text
           @click="quotaTarget = null"
         />
         <Button
-          label="Save"
+          :label="t('common.save')"
           icon="pi pi-check"
           :loading="quotaSaving"
           @click="submitQuota"

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
@@ -23,6 +24,7 @@ const emit = defineEmits<{
 }>()
 
 const toast = useToast()
+const { t } = useI18n()
 
 // The file whose share links are shown in the dialog (null = closed).
 const shareTarget = ref<FileOut | null>(null)
@@ -34,11 +36,11 @@ function openShare(file: FileOut): void {
 async function copy(url: string): Promise<void> {
   try {
     await navigator.clipboard.writeText(url)
-    toast.add({ severity: 'success', summary: 'Link copied', life: 2000 })
+    toast.add({ severity: 'success', summary: t('fileList.linkCopied'), life: 2000 })
   } catch {
     toast.add({
       severity: 'warn',
-      summary: 'Could not copy',
+      summary: t('fileList.couldNotCopy'),
       detail: url,
       life: 4000,
     })
@@ -49,13 +51,13 @@ async function copy(url: string): Promise<void> {
 <template>
   <div class="file-list">
     <div class="head">
-      <span class="col-name">Name</span>
-      <span class="col-size">Size</span>
+      <span class="col-name">{{ t('fileList.name') }}</span>
+      <span class="col-size">{{ t('fileList.size') }}</span>
       <span class="col-actions" />
     </div>
 
     <p v-if="!files.length" class="empty">
-      {{ emptyText ?? 'No files yet.' }}
+      {{ emptyText ?? t('fileList.noFiles') }}
     </p>
 
     <div v-for="file in files" :key="file.id" class="row">
@@ -67,12 +69,12 @@ async function copy(url: string): Promise<void> {
         <span class="meta">
           <span
             class="meta-item"
-            :title="`Downloads: ${formatDownloads(file.download_count, file.max_downloads)}`"
+            :title="t('admin.downloads', { count: formatDownloads(file.download_count, file.max_downloads) })"
           >
             <i class="pi pi-download" />
             {{ formatDownloads(file.download_count, file.max_downloads) }}
           </span>
-          <span class="meta-item" :title="`Expires: ${formatExpiry(file.expires_at)}`">
+          <span class="meta-item" :title="t('admin.expires', { date: formatExpiry(file.expires_at) })">
             <i class="pi pi-clock" />
             {{ formatExpiry(file.expires_at) }}
           </span>
@@ -85,7 +87,7 @@ async function copy(url: string): Promise<void> {
           severity="secondary"
           text
           rounded
-          aria-label="Share links"
+          :aria-label="t('header.shareLinks')"
           @click="openShare(file)"
         />
         <Button
@@ -93,7 +95,7 @@ async function copy(url: string): Promise<void> {
           severity="danger"
           text
           rounded
-          aria-label="Delete file"
+          :aria-label="t('dashboard.deleteFile')"
           @click="emit('delete', file)"
         />
       </div>
@@ -101,7 +103,7 @@ async function copy(url: string): Promise<void> {
 
     <Dialog
       :visible="shareTarget !== null"
-      header="Share links"
+      :header="t('fileList.shareLinks')"
       modal
       :style="{ width: '30rem' }"
       :breakpoints="{ '480px': '90vw' }"
@@ -109,7 +111,7 @@ async function copy(url: string): Promise<void> {
     >
       <div v-if="shareTarget" class="share-links">
         <div class="share-link">
-          <label>Public link</label>
+          <label>{{ t('fileList.publicLink') }}</label>
           <div class="link-row">
             <InputText
               :model-value="toSharePage(shareTarget.public_url)"
@@ -119,14 +121,14 @@ async function copy(url: string): Promise<void> {
             <Button
               icon="pi pi-copy"
               severity="secondary"
-              aria-label="Copy public link"
+              :aria-label="t('fileList.publicLink')"
               @click="copy(toSharePage(shareTarget.public_url))"
             />
           </div>
         </div>
 
         <div class="share-link">
-          <label>Local link</label>
+          <label>{{ t('fileList.localLink') }}</label>
           <div class="link-row">
             <InputText
               :model-value="toSharePage(shareTarget.local_url)"
@@ -136,7 +138,7 @@ async function copy(url: string): Promise<void> {
             <Button
               icon="pi pi-copy"
               severity="secondary"
-              aria-label="Copy local link"
+              :aria-label="t('fileList.localLink')"
               @click="copy(toSharePage(shareTarget.local_url))"
             />
           </div>

@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
+import { useI18n } from "vue-i18n";
 import ProgressBar from "primevue/progressbar";
 import { ApiError, filesApi, type DiskUsage } from "@/api";
 import { formatBytes } from "@/utils/format";
+
+const { t } = useI18n();
 
 const data = ref<DiskUsage | null>(null);
 const loading = ref(true);
@@ -23,7 +26,7 @@ onMounted(async () => {
     data.value = await filesApi.diskUsage();
   } catch (err) {
     error.value =
-      err instanceof ApiError ? err.detail : "Could not load disk usage.";
+      err instanceof ApiError ? err.detail : t('admin.couldNotLoadDiskUsage');
   } finally {
     loading.value = false;
   }
@@ -35,11 +38,11 @@ onMounted(async () => {
     <div class="head">
       <h2 class="section-title">
         <i class="pi pi-server" />
-        Disk space
+        {{ t('admin.diskSpace') }}
       </h2>
     </div>
 
-    <div v-if="loading" class="muted">Loading…</div>
+    <div v-if="loading" class="muted">{{ t('common.loading') }}</div>
     <div v-else-if="error" class="muted">{{ error }}</div>
 
     <template v-else-if="data">
@@ -49,8 +52,8 @@ onMounted(async () => {
         :class="{ 'disk-full': nearFull }"
       />
       <div class="foot">
-        <span>{{ formatBytes(data.used_bytes) }} used ({{ percent }}%)</span>
-        <span>{{ formatBytes(data.total_bytes) }} total</span>
+        <span>{{ formatBytes(data.used_bytes) }} {{ t('admin.used') }} ({{ percent }}%)</span>
+        <span>{{ formatBytes(data.total_bytes) }} {{ t('admin.total') }}</span>
       </div>
     </template>
   </section>

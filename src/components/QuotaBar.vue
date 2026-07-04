@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import ProgressBar from 'primevue/progressbar'
 import { formatBytes } from '@/utils/format'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   used: number
@@ -24,7 +27,7 @@ const nearLimit = computed(() => props.quota !== null && percent.value >= 90)
     <div class="quota-head">
       <span class="label">
         <i class="pi pi-database" />
-        Storage
+        {{ t('quota.storage') }}
       </span>
       <span class="value" :class="{ warn: nearLimit }">
         {{ formatBytes(used) }} / {{ quota === null ? '∞' : formatBytes(quota) }}

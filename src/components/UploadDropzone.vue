@@ -1,45 +1,51 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref } from "vue";
+import { useI18n } from "vue-i18n";
+
+const { t } = useI18n();
 
 const props = defineProps<{
   /** Max total size hint shown in the subtitle, in MB. */
-  maxSizeMb?: number
-  disabled?: boolean
-}>()
+  maxSizeMb?: number;
+  disabled?: boolean;
+}>();
 
 const emit = defineEmits<{
-  files: [files: File[]]
-}>()
+  files: [files: File[]];
+}>();
 
-const input = ref<HTMLInputElement>()
-const dragging = ref(false)
+const input = ref<HTMLInputElement>();
+const dragging = ref(false);
 
 function openPicker(): void {
-  if (!props.disabled) input.value?.click()
+  if (!props.disabled) input.value?.click();
 }
 
 function onInputChange(event: Event): void {
-  const target = event.target as HTMLInputElement
-  emitFiles(target.files)
-  target.value = '' // allow re-selecting the same file
+  const target = event.target as HTMLInputElement;
+  emitFiles(target.files);
+  target.value = ""; // allow re-selecting the same file
 }
 
 function onDrop(event: DragEvent): void {
-  dragging.value = false
-  if (props.disabled) return
-  emitFiles(event.dataTransfer?.files)
+  dragging.value = false;
+  if (props.disabled) return;
+  emitFiles(event.dataTransfer?.files);
 }
 
 function emitFiles(list: FileList | null | undefined): void {
-  if (!list || !list.length) return
-  emit('files', Array.from(list))
+  if (!list || !list.length) return;
+  emit("files", Array.from(list));
 }
 
 function sizeHint(): string {
-  if (!props.maxSizeMb) return ''
-  const gb = props.maxSizeMb / 1024
-  const limit = gb >= 1 ? `${(Math.round(gb * 10) / 10).toString()} GB` : `${props.maxSizeMb} MB`
-  return ` We can accept only files that are less than ${limit} in total.`
+  if (!props.maxSizeMb) return "";
+  const gb = props.maxSizeMb / 1024;
+  const limit =
+    gb >= 1
+      ? `${(Math.round(gb * 10) / 10).toString()} GB`
+      : `${props.maxSizeMb} MB`;
+  return `${t("admin.uploadSizeLimit", { limit })}`;
 }
 </script>
 
@@ -57,10 +63,8 @@ function sizeHint(): string {
     @drop.prevent="onDrop"
   >
     <i class="pi pi-cloud-upload icon" />
-    <h2 class="title">Upload a file</h2>
-    <p class="subtitle">
-      Drag &amp; drop a file here to start your share.{{ sizeHint() }}
-    </p>
+    <h2 class="title">{{ t("admin.uploadFileTitle") }}</h2>
+    <p class="subtitle">{{ t("admin.uploadFile") }}{{ sizeHint() }}</p>
 
     <input
       ref="input"
@@ -85,7 +89,9 @@ function sizeHint(): string {
   background: var(--p-content-background);
   cursor: pointer;
   text-align: center;
-  transition: border-color 0.15s, background 0.15s;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
 }
 
 .dropzone:hover,

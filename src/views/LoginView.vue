@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import InputText from 'primevue/inputtext'
 import Password from 'primevue/password'
 import Button from 'primevue/button'
@@ -11,6 +12,7 @@ import { ApiError } from '@/api'
 const auth = useAuthStore()
 const router = useRouter()
 const route = useRoute()
+const { t } = useI18n()
 
 const username = ref('')
 const password = ref('')
@@ -22,7 +24,7 @@ const passwordChanged = computed(() => route.query.passwordChanged === '1')
 
 async function onSubmit(): Promise<void> {
   if (!username.value || !password.value) {
-    error.value = 'Please enter your username and password.'
+    error.value = t('auth.enterCredentials')
     return
   }
   error.value = ''
@@ -34,10 +36,10 @@ async function onSubmit(): Promise<void> {
   } catch (err) {
     error.value =
       err instanceof ApiError && err.status === 401
-        ? 'Incorrect username or password.'
+        ? t('auth.invalidCredentials')
         : err instanceof ApiError
           ? err.detail
-          : 'Something went wrong. Please try again.'
+          : t('common.error')
   } finally {
     loading.value = false
   }
@@ -46,7 +48,7 @@ async function onSubmit(): Promise<void> {
 
 <template>
   <div class="login">
-    <h1 class="welcome">Welcome :)</h1>
+    <h1 class="welcome">{{ t('auth.welcome') }}</h1>
 
     <Message
       v-if="passwordChanged"
@@ -54,12 +56,12 @@ async function onSubmit(): Promise<void> {
       variant="simple"
       class="notice"
     >
-      Password updated. Please sign in with your new password.
+      {{ t('auth.passwordChanged') }}
     </Message>
 
     <form class="card" @submit.prevent="onSubmit">
       <div class="field">
-        <label for="username">Username</label>
+        <label for="username">{{ t('auth.usernameLabel') }}</label>
         <InputText
           id="username"
           v-model="username"
@@ -70,7 +72,7 @@ async function onSubmit(): Promise<void> {
       </div>
 
       <div class="field">
-        <label for="password">Password</label>
+        <label for="password">{{ t('auth.passwordLabel') }}</label>
         <Password
           input-id="password"
           v-model="password"
@@ -88,7 +90,7 @@ async function onSubmit(): Promise<void> {
 
       <Button
         type="submit"
-        label="Sign in"
+        :label="t('auth.signIn')"
         icon="pi pi-sign-in"
         :loading="loading"
         fluid

@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import Button from 'primevue/button'
+import Select from 'primevue/select'
 import Menu from 'primevue/menu'
 import Avatar from 'primevue/avatar'
 import type { MenuItem } from 'primevue/menuitem'
@@ -12,6 +14,12 @@ const auth = useAuthStore()
 const route = useRoute()
 const router = useRouter()
 const { isDark, toggle } = useDarkMode()
+const { t, locale } = useI18n()
+
+const languages = computed(() => [
+  { label: 'English', value: 'en' },
+  { label: 'Русский', value: 'ru' },
+])
 
 const accountMenu = ref<InstanceType<typeof Menu>>()
 
@@ -20,16 +28,16 @@ const accountMenu = ref<InstanceType<typeof Menu>>()
 const tabs = computed(() => {
   if (!auth.isAdmin) return []
   return [
-    { label: 'Upload', to: '/', name: 'dashboard' },
-    { label: 'Administration', to: '/admin', name: 'admin' },
+    { label: t('header.upload'), to: '/', name: 'dashboard' },
+    { label: t('header.administration'), to: '/admin', name: 'admin' },
   ]
 })
 
 const accountItems = computed<MenuItem[]>(() => [
-  { label: auth.user?.username ?? 'Account', disabled: true },
+  { label: auth.user?.username ?? t('header.account'), disabled: true },
   { separator: true },
   {
-    label: 'Log out',
+    label: t('header.logout'),
     icon: 'pi pi-sign-out',
     command: () => {
       auth.logout()
@@ -63,24 +71,32 @@ function toggleAccount(event: Event): void {
     </nav>
 
     <div class="actions">
+      <Select
+        v-model="locale"
+        :options="languages"
+        option-label="label"
+        option-value="value"
+        class="language-select"
+      />
+
       <Button
         :icon="isDark ? 'pi pi-sun' : 'pi pi-moon'"
         severity="secondary"
         text
         rounded
-        :aria-label="isDark ? 'Switch to light mode' : 'Switch to dark mode'"
+        :aria-label="isDark ? t('header.switchToLightMode') : t('header.switchToDarkMode')"
         @click="toggle"
       />
 
       <template v-if="auth.isAuthenticated">
-        <button class="account" aria-label="Account" @click="toggleAccount">
+        <button class="account" :aria-label="t('header.account')" @click="toggleAccount">
           <Avatar icon="pi pi-user" shape="circle" />
         </button>
         <Menu ref="accountMenu" :model="accountItems" :popup="true" />
       </template>
       <Button
         v-else
-        label="Login"
+        :label="t('header.login')"
         icon="pi pi-sign-in"
         @click="router.push('/login')"
       />
@@ -143,6 +159,19 @@ function toggleAccount(event: Event): void {
   align-items: center;
   gap: 0.5rem;
   margin-left: auto;
+}
+
+.language-select {
+  width: 8rem;
+}
+
+.language-select :deep(.p-select-label) {
+  padding: 0.25rem 0.5rem;
+}
+
+.language-select :deep(.p-select-trigger) {
+  width: auto;
+  padding: 0.25rem 0.5rem;
 }
 
 /* When tabs are present they take the auto margin; keep actions pinned right. */

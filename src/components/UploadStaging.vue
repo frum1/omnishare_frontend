@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import InputText from 'primevue/inputtext'
 import InputNumber from 'primevue/inputnumber'
 import Select from 'primevue/select'
@@ -14,11 +15,13 @@ const emit = defineEmits<{
   uploaded: [file: FileOut]
 }>()
 
-const TTL_UNITS = [
-  { label: 'minutes', value: 60 },
-  { label: 'hours', value: 3600 },
-  { label: 'days', value: 86400 },
-]
+const { t } = useI18n()
+
+const TTL_UNITS = computed(() => [
+  { label: t('upload.minutes'), value: 60 },
+  { label: t('upload.hours'), value: 3600 },
+  { label: t('upload.days'), value: 86400 },
+])
 
 interface Pending {
   file: File
@@ -89,10 +92,10 @@ async function upload(): Promise<void> {
     item.status = 'error'
     item.error =
       err instanceof ApiError && err.status === 413
-        ? 'File exceeds the maximum allowed size.'
+        ? t('upload.fileExceedsMaxSize')
         : err instanceof ApiError
           ? err.detail
-          : 'Upload failed. Please try again.'
+          : t('upload.uploadFailed')
   }
 }
 </script>
@@ -113,7 +116,7 @@ async function upload(): Promise<void> {
           severity="secondary"
           text
           rounded
-          aria-label="Remove"
+          :aria-label="t('upload.removeFile')"
           :disabled="pending.status === 'uploading'"
           @click="clear"
         />
@@ -121,7 +124,7 @@ async function upload(): Promise<void> {
 
       <div class="options">
         <div class="field ttl">
-          <label>Expires after</label>
+          <label>{{ t('upload.expiresAfter') }}</label>
           <div class="ttl-inputs">
             <InputNumber
               v-model="pending.ttlValue"
@@ -139,11 +142,11 @@ async function upload(): Promise<void> {
               class="ttl-unit"
             />
           </div>
-          <small class="hint">0 = never expires</small>
+          <small class="hint">{{ t('upload.neverExpires') }}</small>
         </div>
 
         <div class="field">
-          <label>Max downloads</label>
+          <label>{{ t('upload.maxDownloads') }}</label>
           <InputNumber
             v-model="pending.maxDownloads"
             :min="0"
@@ -151,11 +154,11 @@ async function upload(): Promise<void> {
             :disabled="pending.status === 'uploading'"
             fluid
           />
-          <small class="hint">0 = unlimited</small>
+          <small class="hint">{{ t('upload.unlimited') }}</small>
         </div>
 
         <div class="field span-2">
-          <label>Caption (optional)</label>
+          <label>{{ t('upload.caption') }}</label>
           <InputText
             v-model="pending.caption"
             :disabled="pending.status === 'uploading'"
@@ -179,14 +182,14 @@ async function upload(): Promise<void> {
 
       <div class="draft-actions">
         <Button
-          label="Cancel"
+          :label="t('common.cancel')"
           severity="secondary"
           text
           :disabled="pending.status === 'uploading'"
           @click="clear"
         />
         <Button
-          label="Upload"
+          :label="t('upload.upload')"
           icon="pi pi-upload"
           :loading="pending.status === 'uploading'"
           @click="upload"

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
 import UploadStaging from '@/components/UploadStaging.vue'
@@ -7,6 +8,8 @@ import FileList from '@/components/FileList.vue'
 import QuotaBar from '@/components/QuotaBar.vue'
 import { ApiError, filesApi, type FileOut } from '@/api'
 import { useAuthStore } from '@/stores/auth'
+
+const { t } = useI18n()
 
 const auth = useAuthStore()
 const toast = useToast()
@@ -49,8 +52,8 @@ async function loadFiles(): Promise<void> {
   } catch (err) {
     toast.add({
       severity: 'error',
-      summary: 'Could not load files',
-      detail: err instanceof ApiError ? err.detail : 'Please try again.',
+      summary: t('dashboard.couldNotLoadFiles'),
+      detail: err instanceof ApiError ? err.detail : t('common.error'),
       life: 4000,
     })
   } finally {
@@ -64,21 +67,21 @@ function onUploaded(file: FileOut): void {
 
 function onDelete(file: FileOut): void {
   confirm.require({
-    header: 'Delete file',
-    message: `Delete "${file.original_filename}"? This can't be undone.`,
+    header: t('dashboard.deleteFile'),
+    message: t('dashboard.deleteFileConfirm', { filename: file.original_filename }),
     icon: 'pi pi-exclamation-triangle',
-    acceptProps: { label: 'Delete', severity: 'danger' },
-    rejectProps: { label: 'Cancel', severity: 'secondary', outlined: true },
+    acceptProps: { label: t('common.delete'), severity: 'danger' },
+    rejectProps: { label: t('common.cancel'), severity: 'secondary', outlined: true },
     accept: async () => {
       try {
         await filesApi.remove(file.id)
         files.value = files.value.filter((f) => f.id !== file.id)
-        toast.add({ severity: 'success', summary: 'File deleted', life: 2500 })
+        toast.add({ severity: 'success', summary: t('dashboard.fileDeleted'), life: 2500 })
       } catch (err) {
         toast.add({
           severity: 'error',
-          summary: 'Could not delete file',
-          detail: err instanceof ApiError ? err.detail : 'Please try again.',
+          summary: t('dashboard.couldNotDeleteFile'),
+          detail: err instanceof ApiError ? err.detail : t('common.error'),
           life: 4000,
         })
       }
@@ -95,7 +98,7 @@ function onDelete(file: FileOut): void {
 
     <FileList
       :files="files"
-      empty-text="No files uploaded yet. Drop some above to get started."
+      :empty-text="t('dashboard.noFilesYet')"
       @delete="onDelete"
     />
   </div>

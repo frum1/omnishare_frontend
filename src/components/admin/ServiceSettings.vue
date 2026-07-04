@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import InputText from 'primevue/inputtext'
 import InputNumber from 'primevue/inputnumber'
 import Select from 'primevue/select'
@@ -8,6 +9,7 @@ import { useToast } from 'primevue/usetoast'
 import { ApiError, settingsApi, type Settings } from '@/api'
 
 const toast = useToast()
+const { t } = useI18n()
 
 const form = ref<Settings | null>(null)
 const loading = ref(true)
@@ -15,10 +17,10 @@ const saving = ref(false)
 
 // Max file size is stored in MB by the API; expose a MB/GB unit picker.
 // The unit value is a multiplier in MB terms (GB = 1024 MB).
-const SIZE_UNITS = [
+const SIZE_UNITS = computed(() => [
   { label: 'MB', value: 1 },
   { label: 'GB', value: 1024 },
-]
+])
 const sizeValue = ref(1)
 const sizeUnit = ref(1)
 
@@ -40,8 +42,8 @@ onMounted(async () => {
   } catch (err) {
     toast.add({
       severity: 'error',
-      summary: 'Could not load settings',
-      detail: err instanceof ApiError ? err.detail : 'Please try again.',
+      summary: t('admin.couldNotLoadSettings'),
+      detail: err instanceof ApiError ? err.detail : t('common.error'),
       life: 4000,
     })
   } finally {
@@ -57,12 +59,12 @@ async function save(): Promise<void> {
   try {
     form.value = await settingsApi.update(form.value)
     initSizeFields(form.value.max_file_size_mb)
-    toast.add({ severity: 'success', summary: 'Settings saved', life: 2500 })
+    toast.add({ severity: 'success', summary: t('admin.settingsSaved'), life: 2500 })
   } catch (err) {
     toast.add({
       severity: 'error',
-      summary: 'Could not save settings',
-      detail: err instanceof ApiError ? err.detail : 'Please try again.',
+      summary: t('admin.couldNotSaveSettings'),
+      detail: err instanceof ApiError ? err.detail : t('common.error'),
       life: 4000,
     })
   } finally {
@@ -75,24 +77,24 @@ async function save(): Promise<void> {
   <section class="settings">
     <h2 class="section-title">
       <i class="pi pi-cog" />
-      Service configuration
+      {{ t('admin.serviceConfiguration') }}
     </h2>
 
-    <div v-if="loading" class="loading">Loading…</div>
+    <div v-if="loading" class="loading">{{ t('common.loading') }}</div>
 
     <form v-else-if="form" class="grid" @submit.prevent="save">
       <div class="field span-2">
-        <label for="public-url">Public base URL</label>
+        <label for="public-url">{{ t('admin.publicBaseUrl') }}</label>
         <InputText id="public-url" v-model="form.public_base_url" fluid />
       </div>
 
       <div class="field span-2">
-        <label for="local-url">Local base URL</label>
+        <label for="local-url">{{ t('admin.localBaseUrl') }}</label>
         <InputText id="local-url" v-model="form.local_base_url" fluid />
       </div>
 
       <div class="field">
-        <label for="local-port">Local port</label>
+        <label for="local-port">{{ t('admin.localPort') }}</label>
         <InputNumber
           input-id="local-port"
           v-model="form.local_port"
@@ -104,7 +106,7 @@ async function save(): Promise<void> {
       </div>
 
       <div class="field">
-        <label for="max-size">Max file size</label>
+        <label for="max-size">{{ t('admin.maxFileSize') }}</label>
         <div class="size-inputs">
           <InputNumber
             input-id="max-size"
@@ -124,7 +126,7 @@ async function save(): Promise<void> {
       </div>
 
       <div class="field">
-        <label for="cleanup">Cleanup interval (min)</label>
+        <label for="cleanup">{{ t('admin.cleanupInterval') }}</label>
         <InputNumber
           input-id="cleanup"
           v-model="form.cleanup_interval_minutes"
@@ -137,7 +139,7 @@ async function save(): Promise<void> {
       <div class="actions span-2">
         <Button
           type="submit"
-          label="Save changes"
+          :label="t('admin.saveChanges')"
           icon="pi pi-check"
           :loading="saving"
         />
