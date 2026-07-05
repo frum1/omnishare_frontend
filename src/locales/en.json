@@ -42,6 +42,8 @@
     "upload": "Upload",
     "fileExceedsMaxSize": "File exceeds the maximum allowed size.",
     "uploadFailed": "Upload failed. Please try again.",
+    "fileTooLarge": "This file is {size}, which exceeds the {limit} size limit.",
+    "notEnoughStorage": "This file needs {needed}, but you only have {available} of storage left.",
     "minutes": "minutes",
     "hours": "hours",
     "days": "days"

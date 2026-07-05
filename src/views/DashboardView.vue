@@ -6,7 +6,7 @@ import { useConfirm } from 'primevue/useconfirm'
 import UploadStaging from '@/components/UploadStaging.vue'
 import FileList from '@/components/FileList.vue'
 import QuotaBar from '@/components/QuotaBar.vue'
-import { ApiError, filesApi, type FileOut } from '@/api'
+import { ApiError, filesApi, settingsApi, type FileOut } from '@/api'
 import { useAuthStore } from '@/stores/auth'
 
 const { t } = useI18n()
@@ -26,9 +26,15 @@ const usedBytes = computed(() =>
   files.value.reduce((sum, f) => sum + f.size_bytes, 0),
 )
 
+// Max file size comes from service settings. Regular users may not have
+// access to that admin endpoint — if so, the client-side size check is
+// simply skipped (the upload can still be rejected by the API).
+const maxFileSizeMb = ref<number | null>(null)
+
 onMounted(() => {
   loadFiles()
   loadUsage()
+  loadMaxFileSize()
 })
 
 async function loadUsage(): Promise<void> {
@@ -38,6 +44,16 @@ async function loadUsage(): Promise<void> {
     usageAvailable.value = true
   } catch {
     // Non-fatal: the quota bar simply stays hidden.
+  }
+}
+
+async function loadMaxFileSize(): Promise<void> {
+  try {
+    const settings = await settingsApi.get()
+    maxFileSizeMb.value = settings.max_file_size_mb
+  } catch {
+    // Non-fatal: skip the client-side max-size check (e.g. non-admin users
+    // may not be able to read service settings).
   }
 }
 
@@ -92,7 +108,12 @@ function onDelete(file: FileOut): void {
 
 <template>
   <div class="dashboard">
-    <UploadStaging @uploaded="onUploaded" />
+    <UploadStaging
+      :max-file-size-mb="maxFileSizeMb"
+      :quota-bytes="quotaBytes"
+      :used-bytes="usedBytes"
+      @uploaded="onUploaded"
+    />
 
     <QuotaBar v-if="usageAvailable" :used="usedBytes" :quota="quotaBytes" />
 

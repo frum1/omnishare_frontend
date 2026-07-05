@@ -11,6 +11,15 @@ import UploadDropzone from '@/components/UploadDropzone.vue'
 import { ApiError, filesApi, type FileOut } from '@/api'
 import { formatBytes } from '@/utils/format'
 
+const props = defineProps<{
+  /** Hard cap from service settings, in MB. null/undefined = unknown, skip the check. */
+  maxFileSizeMb?: number | null
+  /** Current user's quota in bytes. null = unlimited, skip the check. */
+  quotaBytes?: number | null
+  /** Bytes already used by the current user, for the quota check. */
+  usedBytes?: number
+}>()
+
 const emit = defineEmits<{
   uploaded: [file: FileOut]
 }>()
@@ -34,24 +43,59 @@ interface Pending {
   status: 'idle' | 'uploading' | 'error'
   progress: number
   error: string
+  /** Set when the file was rejected client-side before any request was made
+   *  (too large, or over quota). Retrying is pointless without a different
+   *  file, so the Upload action stays hidden. */
+  invalid: boolean
   controller?: AbortController
 }
 
 // One upload = one file, so only a single file is ever staged at a time.
 const pending = ref<Pending | null>(null)
 
+/**
+ * Reject files up front — too large or over quota — so the user finds out
+ * before a multi-GB transfer starts, instead of failing partway through.
+ */
+function validate(file: File): string | null {
+  const maxBytes = props.maxFileSizeMb ? props.maxFileSizeMb * 1024 * 1024 : null
+  if (maxBytes !== null && file.size > maxBytes) {
+    return t('upload.fileTooLarge', {
+      size: formatBytes(file.size),
+      limit: formatBytes(maxBytes),
+    })
+  }
+
+  const quota = props.quotaBytes ?? null
+  if (quota !== null) {
+    const used = props.usedBytes ?? 0
+    const remaining = Math.max(0, quota - used)
+    if (file.size > remaining) {
+      return t('upload.notEnoughStorage', {
+        needed: formatBytes(file.size),
+        available: formatBytes(remaining),
+      })
+    }
+  }
+
+  return null
+}
+
 function onFiles(files: File[]): void {
   const file = files[0]
   if (!file) return
+
+  const error = validate(file)
   pending.value = {
     file,
     ttlValue: 0,
     ttlUnit: 86400,
     maxDownloads: 0,
     caption: '',
-    status: 'idle',
+    status: error ? 'error' : 'idle',
     progress: 0,
-    error: '',
+    error: error ?? '',
+    invalid: error !== null,
   }
 }
 
@@ -62,7 +106,7 @@ function clear(): void {
 
 async function upload(): Promise<void> {
   const item = pending.value
-  if (!item) return
+  if (!item || item.invalid) return
 
   item.status = 'uploading'
   item.progress = 0
@@ -102,7 +146,11 @@ async function upload(): Promise<void> {
 
 <template>
   <div class="staging">
-    <UploadDropzone v-if="!pending" @files="onFiles" />
+    <UploadDropzone
+      v-if="!pending"
+      :max-size-mb="props.maxFileSizeMb ?? undefined"
+      @files="onFiles"
+    />
 
     <div v-else class="draft">
       <div class="draft-head">
@@ -122,7 +170,7 @@ async function upload(): Promise<void> {
         />
       </div>
 
-      <div class="options">
+      <div v-if="!pending.invalid" class="options">
         <div class="field ttl">
           <label>{{ t('upload.expiresAfter') }}</label>
           <div class="ttl-inputs">
@@ -189,6 +237,7 @@ async function upload(): Promise<void> {
           @click="clear"
         />
         <Button
+          v-if="!pending.invalid"
           :label="t('upload.upload')"
           icon="pi pi-upload"
           :loading="pending.status === 'uploading'"
