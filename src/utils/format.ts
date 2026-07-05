@@ -19,6 +19,30 @@ export function formatBytes(bytes: number): string {
   return `${text} ${units[unit]}`
 }
 
+/** Transfer rate as a human-readable string, e.g. "12.4 MB/s". */
+export function formatSpeed(bytesPerSecond: number): string {
+  if (!Number.isFinite(bytesPerSecond) || bytesPerSecond <= 0) return '—'
+  return `${formatBytes(bytesPerSecond)}/s`
+}
+
+/**
+ * A duration in seconds as a compact ETA: "45s", "3m 20s", "1h 5m". Returns
+ * "—" when the estimate is not yet meaningful (unknown or non-finite).
+ */
+export function formatDuration(seconds: number): string {
+  if (!Number.isFinite(seconds) || seconds < 0) return '—'
+  const total = Math.round(seconds)
+  if (total < 60) return `${total}s`
+
+  const minutes = Math.floor(total / 60)
+  const secs = total % 60
+  if (minutes < 60) return secs ? `${minutes}m ${secs}s` : `${minutes}m`
+
+  const hours = Math.floor(minutes / 60)
+  const mins = minutes % 60
+  return mins ? `${hours}h ${mins}m` : `${hours}h`
+}
+
 /**
  * Convert an API direct-download URL (`{base}/f/{id}`) into the frontend share
  * page URL (`{base}/s/{id}`). Keeps the API's public/local base host, but points

@@ -1,15 +1,16 @@
 import { API_BASE_URL } from './http'
 
 export * from './types'
-export {
-  ApiError,
-  API_BASE_URL,
-  getToken,
-  setToken,
-  type UploadProgress,
-} from './http'
+export { ApiError, API_BASE_URL, getToken, setToken } from './http'
 export { authApi } from './auth'
 export { filesApi } from './files'
+export {
+  createUpload,
+  type UploadHandle,
+  type UploadStats,
+  type CreateUploadParams,
+  type UploadCallbacks,
+} from './upload'
 export { usersApi } from './users'
 export { settingsApi } from './settings'
 

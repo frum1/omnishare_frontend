@@ -50,15 +50,8 @@ export interface ChangePasswordRequest {
 
 // --- Files ---
 
-/** Parameters for a file upload. `file` is required, the rest are optional. */
-export interface UploadFileParams {
-  file: File
-  /** Time-to-live in seconds. 0 or omitted = infinite. */
-  ttl_seconds?: number
-  /** Max downloads before auto-delete. 0 or omitted = infinite. */
-  max_downloads?: number
-  caption?: string
-}
+// Upload parameters live with the tus upload client; see `CreateUploadParams`
+// in ./upload.
 
 export interface UpdateCaptionRequest {
   caption: string | null

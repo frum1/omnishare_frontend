@@ -8,8 +8,8 @@ import Button from 'primevue/button'
 import ProgressBar from 'primevue/progressbar'
 import Message from 'primevue/message'
 import UploadDropzone from '@/components/UploadDropzone.vue'
-import { ApiError, filesApi, type FileOut } from '@/api'
-import { formatBytes } from '@/utils/format'
+import { ApiError, createUpload, type FileOut, type UploadHandle, type UploadStats } from '@/api'
+import { formatBytes, formatSpeed, formatDuration } from '@/utils/format'
 
 const props = defineProps<{
   /** Hard cap from service settings, in MB. null/undefined = unknown, skip the check. */
@@ -40,18 +40,29 @@ interface Pending {
   /** 0 = unlimited downloads. */
   maxDownloads: number
   caption: string
-  status: 'idle' | 'uploading' | 'error'
+  status: 'idle' | 'uploading' | 'paused' | 'error'
   progress: number
+  /** Smoothed transfer rate in bytes/second; 0 until the first sample. */
+  bytesPerSecond: number
+  /** Estimated seconds remaining; Infinity while unknown. */
+  etaSeconds: number
   error: string
   /** Set when the file was rejected client-side before any request was made
    *  (too large, or over quota). Retrying is pointless without a different
    *  file, so the Upload action stays hidden. */
   invalid: boolean
-  controller?: AbortController
+  /** The resumable tus upload; present once uploading has started. */
+  handle?: UploadHandle
 }
 
 // One upload = one file, so only a single file is ever staged at a time.
 const pending = ref<Pending | null>(null)
+
+// A transfer is in flight (or paused mid-flight): the options are locked and the
+// staged file can only be cancelled, not re-configured.
+const busy = computed(
+  () => pending.value?.status === 'uploading' || pending.value?.status === 'paused',
+)
 
 /**
  * Reject files up front — too large or over quota — so the user finds out
@@ -94,53 +105,83 @@ function onFiles(files: File[]): void {
     caption: '',
     status: error ? 'error' : 'idle',
     progress: 0,
+    bytesPerSecond: 0,
+    etaSeconds: Infinity,
     error: error ?? '',
     invalid: error !== null,
   }
 }
 
 function clear(): void {
-  pending.value?.controller?.abort()
+  // Discard any partial upload on the server before dropping the staged file.
+  void pending.value?.handle?.abort()
   pending.value = null
 }
 
-async function upload(): Promise<void> {
+/** Start, or resume after a pause, the resumable upload for the staged file. */
+function upload(): void {
   const item = pending.value
   if (!item || item.invalid) return
 
+  // Resume a paused transfer: reuse the existing handle so tus continues from
+  // the negotiated offset instead of re-sending from zero.
+  if (item.handle && item.status === 'paused') {
+    item.status = 'uploading'
+    item.error = ''
+    void item.handle.start()
+    return
+  }
+
   item.status = 'uploading'
   item.progress = 0
+  item.bytesPerSecond = 0
+  item.etaSeconds = Infinity
   item.error = ''
-  item.controller = new AbortController()
 
   const ttl = item.ttlValue > 0 ? item.ttlValue * item.ttlUnit : 0
 
-  try {
-    const created = await filesApi.upload(
-      {
-        file: item.file,
-        ttl_seconds: ttl,
-        max_downloads: item.maxDownloads > 0 ? item.maxDownloads : 0,
-        caption: item.caption.trim() || undefined,
+  item.handle = createUpload(
+    {
+      file: item.file,
+      ttl_seconds: ttl,
+      max_downloads: item.maxDownloads > 0 ? item.maxDownloads : 0,
+      caption: item.caption.trim() || undefined,
+    },
+    {
+      onProgress: (stats: UploadStats) => {
+        // Ignore late callbacks after a pause so the UI freezes at the offset.
+        if (item.status !== 'uploading') return
+        item.progress = stats.percent
+        item.bytesPerSecond = stats.bytesPerSecond
+        item.etaSeconds = stats.etaSeconds
       },
-      { onProgress: (p) => (item.progress = p.percent), signal: item.controller.signal },
-    )
-    emit('uploaded', created)
-    pending.value = null
-  } catch (err) {
-    if (err instanceof DOMException && err.name === 'AbortError') {
-      item.status = 'idle'
-      item.progress = 0
-      return
-    }
-    item.status = 'error'
-    item.error =
-      err instanceof ApiError && err.status === 413
-        ? t('upload.fileExceedsMaxSize')
-        : err instanceof ApiError
-          ? err.detail
-          : t('upload.uploadFailed')
-  }
+      onSuccess: (created: FileOut) => {
+        emit('uploaded', created)
+        pending.value = null
+      },
+      onError: (err: Error) => {
+        item.status = 'error'
+        item.error =
+          err instanceof ApiError && err.status === 413
+            ? t('upload.fileExceedsMaxSize')
+            : err instanceof ApiError && err.detail
+              ? err.detail
+              : t('upload.uploadFailed')
+      },
+    },
+  )
+
+  void item.handle.start()
+}
+
+/** Pause the in-flight transfer, keeping progress for a later resume. */
+function pauseUpload(): void {
+  const item = pending.value
+  if (!item?.handle || item.status !== 'uploading') return
+  item.handle.pause()
+  item.status = 'paused'
+  item.bytesPerSecond = 0
+  item.etaSeconds = Infinity
 }
 </script>
 
@@ -165,7 +206,6 @@ async function upload(): Promise<void> {
           text
           rounded
           :aria-label="t('upload.removeFile')"
-          :disabled="pending.status === 'uploading'"
           @click="clear"
         />
       </div>
@@ -178,7 +218,7 @@ async function upload(): Promise<void> {
               v-model="pending.ttlValue"
               :min="0"
               :use-grouping="false"
-              :disabled="pending.status === 'uploading'"
+              :disabled="busy"
               class="ttl-value"
             />
             <Select
@@ -186,7 +226,7 @@ async function upload(): Promise<void> {
               :options="TTL_UNITS"
               option-label="label"
               option-value="value"
-              :disabled="pending.status === 'uploading'"
+              :disabled="busy"
               class="ttl-unit"
             />
           </div>
@@ -199,7 +239,7 @@ async function upload(): Promise<void> {
             v-model="pending.maxDownloads"
             :min="0"
             :use-grouping="false"
-            :disabled="pending.status === 'uploading'"
+            :disabled="busy"
             fluid
           />
           <small class="hint">{{ t('upload.unlimited') }}</small>
@@ -207,16 +247,22 @@ async function upload(): Promise<void> {
 
         <div class="field span-2">
           <label>{{ t('upload.caption') }}</label>
-          <InputText
-            v-model="pending.caption"
-            :disabled="pending.status === 'uploading'"
-            fluid
-          />
+          <InputText v-model="pending.caption" :disabled="busy" fluid />
         </div>
       </div>
 
-      <div v-if="pending.status === 'uploading'" class="progress">
+      <div v-if="busy" class="progress">
         <ProgressBar :value="pending.progress" />
+        <div class="progress-stats">
+          <span class="pct">{{ pending.progress }}%</span>
+          <span v-if="pending.status === 'paused'" class="paused-tag">
+            <i class="pi pi-pause-circle" /> {{ t('upload.paused') }}
+          </span>
+          <template v-else>
+            <span class="speed">{{ formatSpeed(pending.bytesPerSecond) }}</span>
+            <span class="eta">{{ t('upload.eta', { time: formatDuration(pending.etaSeconds) }) }}</span>
+          </template>
+        </div>
       </div>
 
       <Message
@@ -233,14 +279,25 @@ async function upload(): Promise<void> {
           :label="t('common.cancel')"
           severity="secondary"
           text
-          :disabled="pending.status === 'uploading'"
           @click="clear"
         />
         <Button
-          v-if="!pending.invalid"
+          v-if="pending.status === 'uploading'"
+          :label="t('upload.pause')"
+          icon="pi pi-pause"
+          severity="secondary"
+          @click="pauseUpload"
+        />
+        <Button
+          v-else-if="pending.status === 'paused'"
+          :label="t('upload.resume')"
+          icon="pi pi-play"
+          @click="upload"
+        />
+        <Button
+          v-else-if="!pending.invalid"
           :label="t('upload.upload')"
           icon="pi pi-upload"
-          :loading="pending.status === 'uploading'"
           @click="upload"
         />
       </div>
@@ -337,6 +394,32 @@ async function upload(): Promise<void> {
 
 .progress {
   padding-top: 1rem;
+}
+
+.progress-stats {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 0.5rem;
+  font-size: 0.82rem;
+  color: var(--p-text-muted-color);
+}
+
+.progress-stats .pct {
+  font-weight: 600;
+  color: var(--p-text-color);
+}
+
+.progress-stats .eta {
+  margin-left: auto;
+}
+
+.progress-stats .paused-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-left: auto;
+  color: var(--p-primary-color);
 }
 
 .draft-error {
