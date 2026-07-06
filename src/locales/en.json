@@ -81,7 +81,10 @@
     "switchToLightMode": "Switch to light mode",
     "switchToDarkMode": "Switch to dark mode",
     "login": "Login",
-    "shareLinks": "Share links"
+    "shareLinks": "Share links",
+    "language": "Language",
+    "roleAdmin": "Admin",
+    "roleUser": "User"
   },
   "admin": {
     "diskSpace": "Disk space",

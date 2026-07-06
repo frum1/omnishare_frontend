@@ -81,7 +81,10 @@
     "switchToLightMode": "Переключиться на светлый режим",
     "switchToDarkMode": "Переключиться на тёмный режим",
     "login": "Вход",
-    "shareLinks": "Ссылки для поделиться"
+    "shareLinks": "Ссылки для поделиться",
+    "language": "Язык",
+    "roleAdmin": "Администратор",
+    "roleUser": "Пользователь"
   },
   "admin": {
     "diskSpace": "Дисковое пространство",
