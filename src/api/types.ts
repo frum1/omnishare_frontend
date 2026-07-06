@@ -31,6 +31,7 @@ export interface FileOut {
 /** Service configuration (admin only). */
 export interface Settings {
   public_base_url: string
+  local_mode: boolean
   local_base_url: string
   local_port: number
   max_file_size_mb: number
@@ -53,8 +54,11 @@ export interface ChangePasswordRequest {
 // Upload parameters live with the tus upload client; see `CreateUploadParams`
 // in ./upload.
 
-export interface UpdateCaptionRequest {
-  caption: string | null
+/** Body for PATCH /api/files/{id}/info. All fields optional; only provided ones change. */
+export interface UpdateFileInfoRequest {
+  caption?: string | null
+  expires_at?: string | null // ISO 8601; null = never expires
+  max_downloads?: number | null // null = unlimited
 }
 
 /** `GET /api/files` returns a flat array for regular users. */

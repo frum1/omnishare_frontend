@@ -64,7 +64,11 @@ function sizeHint(): string {
   >
     <i class="pi pi-cloud-upload icon" />
     <h2 class="title">{{ t("admin.uploadFileTitle") }}</h2>
-    <p class="subtitle">{{ t("admin.uploadFile") }}{{ sizeHint() }}</p>
+    <p class="subtitle">
+      {{ t("admin.uploadFile") }}
+      <br />
+      {{ sizeHint() }}
+    </p>
 
     <input
       ref="input"

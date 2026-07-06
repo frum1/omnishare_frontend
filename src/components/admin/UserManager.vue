@@ -120,17 +120,26 @@ async function submitCreate(): Promise<void> {
   }
 }
 
-async function resetPassword(user: User): Promise<void> {
-  try {
-    resetResult.value = await usersApi.resetPassword(user.id)
-  } catch (err) {
-    toast.add({
-      severity: 'error',
-      summary: t('admin.resetPassword'),
-      detail: err instanceof ApiError ? err.detail : t('common.error'),
-      life: 4000,
-    })
-  }
+function resetPassword(user: User): void {
+  confirm.require({
+    header: t('admin.resetPassword'),
+    message: t('admin.resetPasswordConfirm', { username: user.username }),
+    icon: 'pi pi-exclamation-triangle',
+    acceptProps: { label: t('admin.resetPassword'), severity: 'danger' },
+    rejectProps: { label: t('common.cancel'), severity: 'secondary', outlined: true },
+    accept: async () => {
+      try {
+        resetResult.value = await usersApi.resetPassword(user.id)
+      } catch (err) {
+        toast.add({
+          severity: 'error',
+          summary: t('admin.resetPassword'),
+          detail: err instanceof ApiError ? err.detail : t('common.error'),
+          life: 4000,
+        })
+      }
+    },
+  })
 }
 
 function openQuota(user: User): void {
@@ -338,6 +347,7 @@ const usageLabel = (user: User): string => {
       v-model:visible="createOpen"
       :header="t('admin.createUserTitle')"
       modal
+      :draggable="false"
       :style="{ width: '25rem' }"
     >
       <form class="dialog-form" @submit.prevent="submitCreate">
@@ -383,6 +393,7 @@ const usageLabel = (user: User): string => {
       :visible="resetResult !== null"
       :header="t('admin.temporaryPassword')"
       modal
+      :draggable="false"
       :style="{ width: '25rem' }"
       @update:visible="(v) => { if (!v) resetResult = null }"
     >
@@ -410,6 +421,7 @@ const usageLabel = (user: User): string => {
       :visible="quotaTarget !== null"
       :header="t('admin.changeQuotaTitle')"
       modal
+      :draggable="false"
       :style="{ width: '25rem' }"
       :breakpoints="{ '480px': '92vw' }"
       @update:visible="(v) => { if (!v) quotaTarget = null }"

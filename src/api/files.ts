@@ -3,7 +3,7 @@ import type {
   AdminFileList,
   DiskUsage,
   FileOut,
-  UpdateCaptionRequest,
+  UpdateFileInfoRequest,
   UsageInfo,
   UserFileList,
 } from './types'
@@ -19,10 +19,9 @@ export const filesApi = {
     return http.get<UserFileList | AdminFileList>('/api/files')
   },
 
-  /** PATCH /api/files/{id} — update the caption. */
-  updateCaption(fileId: string, caption: string | null): Promise<FileOut> {
-    const payload: UpdateCaptionRequest = { caption }
-    return http.patch<FileOut>(`/api/files/${fileId}`, payload)
+  /** PATCH /api/files/{id}/info — update caption, expiry and/or download limit. 204 on success. */
+  updateInfo(fileId: string, payload: UpdateFileInfoRequest): Promise<void> {
+    return http.patch<void>(`/api/files/${fileId}/info`, payload)
   },
 
   /** DELETE /api/files/{id} — 204 on success. */

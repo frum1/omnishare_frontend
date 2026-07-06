@@ -22,7 +22,7 @@ const auth = useAuthStore()
   </main>
 
   <Toast position="bottom-right" />
-  <ConfirmDialog />
+  <ConfirmDialog :draggable="false" />
   <ForcePasswordDialog />
 </template>
 

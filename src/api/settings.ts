@@ -11,4 +11,9 @@ export const settingsApi = {
   update(payload: UpdateSettingsRequest): Promise<Settings> {
     return http.post<Settings>('/admin/settings', payload)
   },
+
+  /** GET /api/local-mode-available — whether the server offers a local network link. */
+  localModeAvailable(): Promise<boolean> {
+    return http.get<boolean>('/api/local-mode-available')
+  },
 }
