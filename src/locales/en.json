@@ -142,7 +142,7 @@
     "quotaLabel": "{used} / {quota}",
     "downloads": "Downloads: {count}",
     "expires": "Expires: {date}",
-    "uploadFile": "Drag &amp; drop a file here to start your share.",
+    "uploadFile": "Drag and drop a file here, or paste it with Ctrl+V, to start your share.",
     "uploadFileTitle": "Upload file",
     "uploadSizeLimit": "We can accept only files that are less than {limit} in total."
   }

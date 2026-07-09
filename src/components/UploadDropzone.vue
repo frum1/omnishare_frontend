@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { onMounted, onUnmounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
 
 const { t } = useI18n();
@@ -37,6 +37,22 @@ function emitFiles(list: FileList | null | undefined): void {
   if (!list || !list.length) return;
   emit("files", Array.from(list));
 }
+
+// Paste is a keyboard event with no click target, so it's captured on the
+// window rather than the dropzone element — the user shouldn't have to
+// click into the dropzone first just to give it focus.
+function onPaste(event: ClipboardEvent): void {
+  if (props.disabled) return;
+  const files = event.clipboardData?.files;
+  if (!files || !files.length) return;
+  // Only claim the paste when it actually carries files, so pasting text
+  // into an unrelated input elsewhere on the page is left alone.
+  event.preventDefault();
+  emitFiles(files);
+}
+
+onMounted(() => window.addEventListener("paste", onPaste));
+onUnmounted(() => window.removeEventListener("paste", onPaste));
 
 function sizeHint(): string {
   if (!props.maxSizeMb) return "";

@@ -9,11 +9,13 @@ export default defineConfig(({ mode }) => {
   const target = env.VITE_DEV_API_TARGET ?? 'http://localhost:8000'
 
   // Backend route prefixes proxied to the API in dev to avoid CORS.
+  // /docs, /openapi.json and /redoc are FastAPI's own routes (Swagger/ReDoc) —
+  // without proxying them, Vite falls back to index.html and the SPA's
+  // catch-all route redirects them to "/" before they ever reach the backend.
   const proxy = Object.fromEntries(
-    ['/api', '/auth', '/admin', '/f', '/health'].map((path) => [
-      path,
-      { target, changeOrigin: true },
-    ]),
+    ['/api', '/auth', '/admin', '/f', '/health', '/docs', '/openapi.json', '/redoc'].map(
+      (path) => [path, { target, changeOrigin: true }],
+    ),
   )
 
   return {

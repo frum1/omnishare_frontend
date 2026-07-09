@@ -128,9 +128,33 @@ async function openShare(file: FileOut): Promise<void> {
     : ''
 }
 
+/**
+ * Falls back to the legacy execCommand copy when the async Clipboard API is
+ * unavailable — e.g. when the app is opened over plain HTTP on a LAN address
+ * for local-mode sharing, which isn't a secure context.
+ */
+function copyLegacy(url: string): boolean {
+  const textarea = document.createElement('textarea')
+  textarea.value = url
+  textarea.style.position = 'fixed'
+  textarea.style.opacity = '0'
+  document.body.appendChild(textarea)
+  textarea.focus()
+  textarea.select()
+  try {
+    return document.execCommand('copy')
+  } finally {
+    document.body.removeChild(textarea)
+  }
+}
+
 async function copy(url: string): Promise<void> {
   try {
-    await navigator.clipboard.writeText(url)
+    if (navigator.clipboard) {
+      await navigator.clipboard.writeText(url)
+    } else if (!copyLegacy(url)) {
+      throw new Error('execCommand copy failed')
+    }
     toast.add({ severity: 'success', summary: t('fileList.linkCopied'), life: 2000 })
   } catch {
     toast.add({
