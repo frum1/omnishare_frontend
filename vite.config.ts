@@ -12,8 +12,9 @@ export default defineConfig(({ mode }) => {
   // /docs, /openapi.json and /redoc are FastAPI's own routes (Swagger/ReDoc) —
   // without proxying them, Vite falls back to index.html and the SPA's
   // catch-all route redirects them to "/" before they ever reach the backend.
+  // /f is the public file-download link, which intentionally lives outside /api.
   const proxy = Object.fromEntries(
-    ['/api', '/auth', '/admin', '/f', '/health', '/docs', '/openapi.json', '/redoc'].map(
+    ['/api', '/f', '/docs', '/openapi.json', '/redoc'].map(
       (path) => [path, { target, changeOrigin: true }],
     ),
   )
@@ -25,6 +26,10 @@ export default defineConfig(({ mode }) => {
         '@': fileURLToPath(new URL('./src', import.meta.url)),
       },
     },
+    // `vite preview` (serving the production build locally) has its own proxy
+    // option — it does NOT fall back to `server.proxy`, so without this the
+    // built app has no way to reach the backend at all.
     server: { proxy },
+    preview: { proxy },
   }
 })

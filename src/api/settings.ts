@@ -2,14 +2,14 @@ import { http } from './http'
 import type { Settings, UpdateSettingsRequest } from './types'
 
 export const settingsApi = {
-  /** GET /admin/settings — current service configuration. */
+  /** GET /api/admin/settings — current service configuration. */
   get(): Promise<Settings> {
-    return http.get<Settings>('/admin/settings')
+    return http.get<Settings>('/api/admin/settings')
   },
 
-  /** POST /admin/settings — update selected fields. */
+  /** POST /api/admin/settings — update selected fields. */
   update(payload: UpdateSettingsRequest): Promise<Settings> {
-    return http.post<Settings>('/admin/settings', payload)
+    return http.post<Settings>('/api/admin/settings', payload)
   },
 
   /** GET /api/local-mode-available — whether the server offers a local network link. */
