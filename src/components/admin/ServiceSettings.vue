@@ -133,6 +133,7 @@ async function save(): Promise<void> {
             :min="1"
             :use-grouping="false"
             class="size-value"
+            fluid
           />
           <Select
             v-model="sizeUnit"
@@ -242,10 +243,12 @@ async function save(): Promise<void> {
 
 .size-value {
   flex: 1;
+  min-width: 0;
 }
 
 .size-unit {
   flex: 0 0 6rem;
+  min-width: 0;
 }
 
 .actions {

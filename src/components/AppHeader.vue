@@ -291,18 +291,47 @@ function logout(): void {
 }
 
 @media (max-width: 640px) {
+  .app-header {
+    gap: 0.5rem;
+    padding: 0.6rem 0.85rem;
+  }
+
+  .brand {
+    flex: 0 0 auto;
+  }
+
   .brand-name {
     display: none;
   }
 
+  /* Let the tab bar take the middle space and scroll on its own if the labels
+     don't fit, so long labels never widen the whole page. */
   .tabs {
-    margin: 0 auto;
-    gap: 0;
+    flex: 1 1 auto;
+    min-width: 0;
+    margin: 0;
+    gap: 0.15rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .tabs::-webkit-scrollbar {
+    display: none;
   }
 
   .tab {
-    padding: 0.5rem 0.6rem;
+    padding: 0.45rem 0.6rem;
     font-size: 0.9rem;
+    white-space: nowrap;
+  }
+
+  .actions {
+    flex: 0 0 auto;
+    gap: 0.15rem;
+  }
+
+  .lang-toggle {
+    padding: 0.45rem 0.5rem;
   }
 }
 </style>

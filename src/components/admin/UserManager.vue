@@ -445,6 +445,7 @@ const usageLabel = (user: User): string => {
               :min-fraction-digits="0"
               :max-fraction-digits="2"
               class="quota-value"
+              fluid
             />
             <Select
               v-model="quotaUnit"
@@ -570,6 +571,15 @@ const usageLabel = (user: User): string => {
 
 .username {
   font-weight: 500;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Keep the role/you tags intact; the username truncates instead. */
+.user-head :deep(.p-tag) {
+  flex: 0 0 auto;
 }
 
 .panel-body {
@@ -634,10 +644,12 @@ const usageLabel = (user: User): string => {
 
 .quota-value {
   flex: 1;
+  min-width: 0;
 }
 
 .quota-unit {
   flex: 0 0 6rem;
+  min-width: 0;
 }
 
 .temp-password {

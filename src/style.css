@@ -13,6 +13,12 @@ body,
   height: 100%;
 }
 
+/* Guard against any stray element widening the layout on small screens —
+   the page should only ever scroll vertically. */
+html {
+  overflow-x: hidden;
+}
+
 body {
   margin: 0;
   font-family: var(--font-sans);

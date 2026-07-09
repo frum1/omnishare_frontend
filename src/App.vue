@@ -46,4 +46,10 @@ const auth = useAuthStore()
   display: grid;
   place-items: center;
 }
+
+@media (max-width: 640px) {
+  .container {
+    padding: 1.5rem 1rem;
+  }
+}
 </style>

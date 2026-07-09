@@ -220,6 +220,7 @@ function pauseUpload(): void {
               :use-grouping="false"
               :disabled="busy"
               class="ttl-value"
+              fluid
             />
             <Select
               v-model="pending.ttlUnit"
@@ -381,10 +382,12 @@ function pauseUpload(): void {
 
 .ttl-value {
   flex: 1;
+  min-width: 0;
 }
 
 .ttl-unit {
   flex: 0 0 8rem;
+  min-width: 0;
 }
 
 .hint {

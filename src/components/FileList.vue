@@ -320,6 +320,7 @@ async function copy(url: string): Promise<void> {
               :min="0"
               :use-grouping="false"
               class="ttl-value"
+              fluid
             />
             <Select
               v-model="editForm.ttlUnit"
@@ -506,10 +507,12 @@ async function copy(url: string): Promise<void> {
 
 .ttl-value {
   flex: 1;
+  min-width: 0;
 }
 
 .ttl-unit {
   flex: 0 0 8rem;
+  min-width: 0;
 }
 
 .head,
